@@ -1,9 +1,8 @@
--- [[ CYRUS HUB - FINAL ULTIMATE PRO (UPDATED) ]] --
+-- [[ CYRUS HUB - FINAL V3 (FIXED & FULL) ]] --
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local CoreGui = game:GetService("CoreGui")
-local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,43 +17,39 @@ ScreenGui.Name = "CyrusFinal"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Global Kontroller & Config
+-- Global Kontroller
 local Config = {
+    Aimbot = false,
+    AimPart = "Head",
+    Smoothness = 0.8, -- 0.1 sert, 0.9 çok yumuşak
+    FOV = 120,
     InfiniteJump = false,
     Noclip = false,
     AutoFarm = false,
     AutoShake = false,
-    PoliceESP = false,
-    -- Aimbot Config
-    AimbotEnabled = false,
-    AimPart = "Head",
-    MaxDistance = 500,
-    FOV = 90,
-    Smoothness = 0.5,
-    TeamCheck = true
+    PoliceESP = false
 }
 
 ----------------------------------------------------------------
--- 🎯 AIMBOT YARDIMCI FONKSİYONLAR
+-- 🎯 GELİŞMİŞ VE DÜZELTİLMİŞ AIMBOT (Sağ Tık Kontrollü)
 ----------------------------------------------------------------
 local function GetClosestPlayer()
     local ClosestPlayer = nil
-    local ShortestDistance = Config.MaxDistance
+    local ShortestDistance = 1000
     
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(Config.AimPart) then
-            if Config.TeamCheck and player.Team == LocalPlayer.Team then continue end
+            -- Takım Kontrolü
+            if player.Team == LocalPlayer.Team then continue end
             
             local targetPart = player.Character[Config.AimPart]
             local screenPoint, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
             
             if onScreen then
-                local distance = (LocalPlayer.Character.HumanoidRootPart.Position - targetPart.Position).Magnitude
                 local fovDistance = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
-                
-                if distance < ShortestDistance and fovDistance <= Config.FOV * 2 then
+                if fovDistance <= Config.FOV then
                     ClosestPlayer = player
-                    ShortestDistance = distance
+                    ShortestDistance = fovDistance
                 end
             end
         end
@@ -62,25 +57,24 @@ local function GetClosestPlayer()
     return ClosestPlayer
 end
 
--- Aimbot Döngüsü
+-- Aimbot Sadece Sağ Tıkla Çalışır (Ekran kilitlenmesini önler)
 RunService.RenderStepped:Connect(function()
-    if Config.AimbotEnabled then
+    if Config.Aimbot and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
         local target = GetClosestPlayer()
         if target and target.Character and target.Character:FindFirstChild(Config.AimPart) then
-            local targetPos = target.Character[Config.AimPart].Position
-            local lookCFrame = CFrame.lookAt(Camera.CFrame.Position, targetPos)
+            local lookCFrame = CFrame.lookAt(Camera.CFrame.Position, target.Character[Config.AimPart].Position)
             Camera.CFrame = Camera.CFrame:Lerp(lookCFrame, 1 - Config.Smoothness)
         end
     end
 end)
 
 ----------------------------------------------------------------
--- 📱 SÜRÜKLENEBİLİR SİSTEM
+-- 🏢 UI SİSTEMİ
 ----------------------------------------------------------------
 local function makeDraggable(gui)
     local dragging, dragInput, dragStart, startPos
     gui.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType.Touch then
             dragging = true; dragStart = input.Position; startPos = gui.Position
         end
     end)
@@ -93,83 +87,107 @@ local function makeDraggable(gui)
     gui.InputEnded:Connect(function(input) dragging = false end)
 end
 
-----------------------------------------------------------------
--- 🏢 ANA PANEL
-----------------------------------------------------------------
-local function BuildFinalUI()
+local function BuildUI()
     local MainFrame = Instance.new("Frame", ScreenGui)
-    MainFrame.Size = UDim2.new(0, 480, 0, 380)
-    MainFrame.Position = UDim2.new(0.5, -240, 0.5, -190)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+    MainFrame.Size = UDim2.new(0, 480, 0, 400)
+    MainFrame.Position = UDim2.new(0.5, -240, 0.5, -200)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
     Instance.new("UICorner", MainFrame)
     makeDraggable(MainFrame)
 
-    local Stroke = Instance.new("UIStroke", MainFrame)
-    Stroke.Thickness = 3
-    task.spawn(function() while task.wait() do Stroke.Color = Color3.fromHSV(tick()%5/5, 0.8, 1) end end)
-
-    local Mini = Instance.new("TextButton", ScreenGui)
-    Mini.Size = UDim2.new(0, 55, 0, 55); Mini.Position = UDim2.new(0, 10, 0.5, 0); Mini.Visible = false
-    Mini.Text = "CYRUS"; Mini.BackgroundColor3 = Color3.fromRGB(20, 20, 30); Mini.TextColor3 = Color3.new(0, 1, 0.5)
-    Instance.new("UICorner", Mini).CornerRadius = UDim.new(1, 0)
-    makeDraggable(Mini)
-
-    local Search = Instance.new("TextBox", MainFrame)
-    Search.Size = UDim2.new(0.9, 0, 0, 40); Search.Position = UDim2.new(0.05, 0, 0.05, 0)
-    Search.PlaceholderText = "Özellik Ara (Arsenal, Jailbreak, Genel)..."
-    Search.BackgroundColor3 = Color3.fromRGB(25, 25, 35); Search.TextColor3 = Color3.new(1,1,1)
-    Instance.new("UICorner", Search)
+    local Title = Instance.new("TextLabel", MainFrame)
+    Title.Text = "CYRUS HUB - ULTIMATE FIX"; Title.Size = UDim2.new(1, 0, 0, 40)
+    Title.TextColor3 = Color3.new(1,1,1); Title.BackgroundTransparency = 1
 
     local List = Instance.new("ScrollingFrame", MainFrame)
-    List.Size = UDim2.new(0.9, 0, 0.75, 0); List.Position = UDim2.new(0.05, 0, 0.2, 0)
-    List.BackgroundTransparency = 1; List.ScrollBarThickness = 2
-    local Layout = Instance.new("UIListLayout", List); Layout.Padding = UDim.new(0, 8)
+    List.Size = UDim2.new(0.9, 0, 0.8, 0); List.Position = UDim2.new(0.05, 0, 0.15, 0)
+    List.BackgroundTransparency = 1; List.ScrollBarThickness = 3
+    Instance.new("UIListLayout", List).Padding = UDim.new(0, 5)
 
-    local function AddToggle(name, tags, callback)
+    local function AddToggle(name, callback)
         local b = Instance.new("TextButton", List)
-        b.Size = UDim2.new(1, -10, 0, 45); b.Text = name .. " : OFF"
-        b.BackgroundColor3 = Color3.fromRGB(35, 35, 45); b.TextColor3 = Color3.new(1,1,1)
+        b.Size = UDim2.new(1, -10, 0, 40); b.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        b.Text = name .. " : OFF"; b.TextColor3 = Color3.new(1,1,1)
         Instance.new("UICorner", b)
-        local act = false
+        local state = false
         b.MouseButton1Click:Connect(function()
-            act = not act; callback(act)
-            b.Text = name .. (act and " : ON" or " : OFF")
-            b.BackgroundColor3 = act and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(35, 35, 45)
-        end)
-        Search:GetPropertyChangedSignal("Text"):Connect(function()
-            b.Visible = (Search.Text == "" or string.find(tags:lower(), Search.Text:lower()))
+            state = not state; callback(state)
+            b.Text = name .. (state and " : ON" or " : OFF")
+            b.BackgroundColor3 = state and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(40, 40, 50)
         end)
     end
 
-    -- --- [ ARSENAL ÖZELLİKLERİ ] ---
-    AddToggle("Arsenal: Aimbot", "arsenal aimbot silah", function(v)
-        Config.AimbotEnabled = v
-    end)
-
-    -- --- [ JAILBREAK ÖZELLİKLERİ ] ---
-    AddToggle("Jailbreak: Lazerleri Sil", "jailbreak lazer", function(v)
+    -- ÖZELLİKLER
+    AddToggle("Genel: Aimbot (Sağ Tık Tut)", function(v) Config.Aimbot = v end)
+    
+    AddToggle("Jailbreak: Lazerleri Sil", function(v)
         if v then for _, obj in pairs(Workspace:GetDescendants()) do if obj.Name:lower():find("laser") then obj:Destroy() end end end
     end)
-
-    -- --- [ GENEL ÖZELLİKLER ] ---
-    AddToggle("Genel: Noclip", "genel duvar", function(v) Config.Noclip = v end)
-    AddToggle("Genel: Sonsuz Zıplama", "genel jump", function(v) Config.InfiniteJump = v end)
-
-    -- Kapatma / Açma Butonları
-    local Close = Instance.new("TextButton", MainFrame)
-    Close.Text = "X"; Close.Size = UDim2.new(0, 35, 0, 35); Close.Position = UDim2.new(1, -40, 0, 5)
-    Close.BackgroundColor3 = Color3.new(0.7, 0, 0); Instance.new("UICorner", Close)
     
-    Close.MouseButton1Click:Connect(function() MainFrame.Visible = false; Mini.Visible = true end)
-    Mini.MouseButton1Click:Connect(function() MainFrame.Visible = true; Mini.Visible = false end)
+    AddToggle("Jailbreak: NPC Temizle", function(v)
+        if v then for _, obj in pairs(Workspace:GetDescendants()) do if obj.Name:lower():find("npc") then obj:Destroy() end end end
+    end)
+
+    AddToggle("Jailbreak: Polis ESP", function(v)
+        Config.PoliceESP = v
+        task.spawn(function()
+            while Config.PoliceESP do
+                for _, p in pairs(Players:GetPlayers()) do
+                    if p.Team and p.Team.Name == "Police" and p.Character then
+                        if not p.Character:FindFirstChild("Highlight") then
+                            local h = Instance.new("Highlight", p.Character)
+                            h.FillColor = Color3.new(0, 0, 1)
+                        end
+                    end
+                end
+                task.wait(2)
+            end
+        end)
+    end)
+
+    AddToggle("Military: Auto Farm (Collect)", function(v)
+        Config.AutoFarm = v
+        task.spawn(function()
+            while Config.AutoFarm do
+                pcall(function()
+                    for _, Tycoon in pairs(Workspace.PlayerTycoons:GetChildren()) do
+                        if Tycoon.Name == LocalPlayer.Name then
+                            local collect = Tycoon:FindFirstChild("Models") and Tycoon.Models:FindFirstChild("StarterGiver") and Tycoon.Models.StarterGiver:FindFirstChild("CollectButton")
+                            if collect then
+                                firetouchinterest(LocalPlayer.Character.HumanoidRootPart, collect, 0)
+                                firetouchinterest(LocalPlayer.Character.HumanoidRootPart, collect, 1)
+                            end
+                        end
+                    end
+                end)
+                task.wait(1)
+            end
+        end)
+    end)
+
+    AddToggle("Military: Elmas & Shake Para", function(v)
+        Config.AutoShake = v
+        task.spawn(function()
+            while Config.AutoShake do
+                ReplicatedStorage.Events.BuyGuyBundle:FireServer()
+                task.wait(0.5)
+            end
+        end)
+    end)
+
+    AddToggle("Genel: Noclip", function(v) Config.Noclip = v end)
+    AddToggle("Genel: Sonsuz Zıplama", function(v) Config.InfiniteJump = v end)
 end
 
--- Arka Plan Servisleri (Noclip & Jump)
+-- Arka Plan Döngüleri
 RunService.Stepped:Connect(function()
     if Config.Noclip and LocalPlayer.Character then
-        for _, p in pairs(LocalPlayer.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end
+        for _, p in pairs(LocalPlayer.Character:GetDescendants()) do 
+            if p:IsA("BasePart") then p.CanCollide = false end 
+        end
     end
 end)
+
 UserInputService.JumpRequest:Connect(function()
     if Config.InfiniteJump and LocalPlayer.Character then
         local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -177,5 +195,4 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- BAŞLAT
-BuildFinalUI()
+BuildUI()
